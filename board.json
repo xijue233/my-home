@@ -1,0 +1,373 @@
+{
+  "project": {
+    "name": "西决的新房装修",
+    "address": "银湖万象 6 栋",
+    "area": "98㎡",
+    "start": "",
+    "expectedEnd": ""
+  },
+  "stages": [
+    {
+      "name": "设计交底 & 前期准备",
+      "icon": "📐",
+      "status": "active",
+      "progress": 85,
+      "open": false,
+      "issues": [
+        "还未确定最终报价"
+      ],
+      "support": [],
+      "decisions": []
+    },
+    {
+      "name": "主体拆改",
+      "icon": "🔨",
+      "status": "todo",
+      "progress": 0,
+      "open": false,
+      "issues": [],
+      "support": [],
+      "decisions": []
+    },
+    {
+      "name": "水电改造",
+      "icon": "💡",
+      "status": "todo",
+      "progress": 0,
+      "open": false,
+      "issues": [],
+      "support": [],
+      "decisions": []
+    },
+    {
+      "name": "防水 & 泥瓦工程",
+      "icon": "🧱",
+      "status": "todo",
+      "progress": 0,
+      "open": false,
+      "issues": [],
+      "support": [],
+      "decisions": []
+    },
+    {
+      "name": "吊顶 & 木工",
+      "icon": "🔧",
+      "status": "todo",
+      "progress": 0,
+      "open": false,
+      "issues": [],
+      "support": [],
+      "decisions": []
+    },
+    {
+      "name": "地砖墙砖铺贴",
+      "icon": "🟦",
+      "status": "todo",
+      "progress": 0,
+      "open": false,
+      "issues": [],
+      "support": [],
+      "decisions": []
+    },
+    {
+      "name": "乳胶漆 & 墙面",
+      "icon": "🎨",
+      "status": "todo",
+      "progress": 0,
+      "open": false,
+      "issues": [],
+      "support": [],
+      "decisions": []
+    },
+    {
+      "name": "成品安装",
+      "icon": "🚪",
+      "status": "todo",
+      "progress": 0,
+      "open": false,
+      "issues": [],
+      "support": [],
+      "decisions": []
+    },
+    {
+      "name": "软装进场",
+      "icon": "🛋️",
+      "status": "todo",
+      "progress": 0,
+      "open": false,
+      "issues": [],
+      "support": [],
+      "decisions": []
+    },
+    {
+      "name": "验收 & 入住",
+      "icon": "✅",
+      "status": "todo",
+      "progress": 0,
+      "open": false,
+      "issues": [],
+      "support": [],
+      "decisions": []
+    }
+  ],
+  "hard": {
+    "quote": 98586,
+    "deal": 90000,
+    "plan": [
+      {
+        "stage": "开工前",
+        "pct": 30,
+        "paid": false
+      },
+      {
+        "stage": "吊顶结束",
+        "pct": 30,
+        "paid": false
+      },
+      {
+        "stage": "墙面地砖结束",
+        "pct": 30,
+        "paid": false
+      },
+      {
+        "stage": "完工后 1 个月（无质量问题）",
+        "pct": 10,
+        "paid": false
+      }
+    ],
+    "sections": [
+      {
+        "name": "客餐厅及过道/书房",
+        "quote": 12358
+      },
+      {
+        "name": "主卧室",
+        "quote": 2650
+      },
+      {
+        "name": "衣帽间",
+        "quote": 2354
+      },
+      {
+        "name": "阳台",
+        "quote": 1642
+      },
+      {
+        "name": "厨房及卫生间",
+        "quote": 5708
+      },
+      {
+        "name": "水电路改造",
+        "quote": 17030
+      },
+      {
+        "name": "黄墙绿地",
+        "quote": 784
+      },
+      {
+        "name": "铺砖工程",
+        "quote": 11414
+      },
+      {
+        "name": "主材代购",
+        "quote": 42416
+      },
+      {
+        "name": "其他费用（清运/搬运/管理/保洁）",
+        "quote": 2230
+      }
+    ]
+  },
+  "soft": {
+    "furniture": [
+      {
+        "name": "花洒 · P0",
+        "budget": 1443,
+        "actual": 0
+      },
+      {
+        "name": "厨房大单槽 · P0",
+        "budget": 1000,
+        "actual": 0
+      },
+      {
+        "name": "厨房橱柜+宜家拉篮 · P0",
+        "budget": 5000,
+        "actual": 0
+      },
+      {
+        "name": "马桶 · P0",
+        "budget": 4000,
+        "actual": 0
+      },
+      {
+        "name": "洗手台盆+台下柜 · P0",
+        "budget": 3000,
+        "actual": 0
+      },
+      {
+        "name": "主卧床 · P0",
+        "budget": 3000,
+        "actual": 0
+      },
+      {
+        "name": "主卧床垫 · P0",
+        "budget": 3000,
+        "actual": 0
+      },
+      {
+        "name": "梳妆台 · P1",
+        "budget": 1000,
+        "actual": 0
+      },
+      {
+        "name": "横厅储物柜 · P1",
+        "budget": 5000,
+        "actual": 0
+      },
+      {
+        "name": "餐边柜 · P1",
+        "budget": 2000,
+        "actual": 0
+      },
+      {
+        "name": "电视柜 · P1",
+        "budget": 3000,
+        "actual": 0
+      },
+      {
+        "name": "床头柜 · P1",
+        "budget": 2000,
+        "actual": 0
+      },
+      {
+        "name": "办公椅 · P2",
+        "budget": 3500,
+        "actual": 0
+      },
+      {
+        "name": "沙发 · P2",
+        "budget": 5000,
+        "actual": 0
+      },
+      {
+        "name": "单人沙发 · P2",
+        "budget": 3000,
+        "actual": 0
+      },
+      {
+        "name": "餐桌餐椅 · P2",
+        "budget": 3000,
+        "actual": 0
+      }
+    ],
+    "appliance": [
+      {
+        "name": "中央空调 · P0",
+        "budget": 15000,
+        "actual": 0
+      },
+      {
+        "name": "浴霸 · P0",
+        "budget": 899,
+        "actual": 0
+      },
+      {
+        "name": "抽油烟机+燃气灶 · P0",
+        "budget": 4000,
+        "actual": 0
+      },
+      {
+        "name": "净水系统 · P0",
+        "budget": 2348,
+        "actual": 0
+      },
+      {
+        "name": "小米水浸卫士 · P0",
+        "budget": 200,
+        "actual": 0
+      },
+      {
+        "name": "小米天然气卫士 · P0",
+        "budget": 200,
+        "actual": 0
+      },
+      {
+        "name": "厨房吸顶灯 · P0",
+        "budget": 100,
+        "actual": 0
+      },
+      {
+        "name": "洗碗机 · P0",
+        "budget": 4000,
+        "actual": 0
+      },
+      {
+        "name": "卧室吸顶灯 · P0",
+        "budget": 1000,
+        "actual": 0
+      },
+      {
+        "name": "客厅吸顶灯 · P0",
+        "budget": 2000,
+        "actual": 0
+      },
+      {
+        "name": "餐厅风扇灯 · P0",
+        "budget": 600,
+        "actual": 0
+      },
+      {
+        "name": "路由器+交换机 · P1",
+        "budget": 1000,
+        "actual": 0
+      },
+      {
+        "name": "洗烘套装 · P1",
+        "budget": 7000,
+        "actual": 0
+      },
+      {
+        "name": "冰箱 · P1",
+        "budget": 5000,
+        "actual": 0
+      },
+      {
+        "name": "燃气热水器 · P3",
+        "budget": 1500,
+        "actual": 0
+      },
+      {
+        "name": "电视 · P2",
+        "budget": 5000,
+        "actual": 0
+      },
+      {
+        "name": "除湿机 · P2",
+        "budget": 2000,
+        "actual": 0
+      },
+      {
+        "name": "空气净化器 · P2",
+        "budget": 2000,
+        "actual": 0
+      },
+      {
+        "name": "扫拖机器人 · P2",
+        "budget": 3000,
+        "actual": 0
+      },
+      {
+        "name": "卧室投影仪 · P2",
+        "budget": 3000,
+        "actual": 0
+      },
+      {
+        "name": "智能家居(小米) · P2",
+        "budget": 2000,
+        "actual": 0
+      }
+    ]
+  },
+  "updatedAt": 1786252992209
+}
