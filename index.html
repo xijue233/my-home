@@ -344,7 +344,18 @@ let localUpdatedAt = 0;
 let firstLoad = true;
 
 /* ===================== 云端同步 ===================== */
-const API = location.origin + "/api/board";
+/* ---- Supabase 配置（前端仅用 publishable key，secret 不暴露） ---- */
+const SUPABASE_URL = "https://gjysocgnwgljlpkurixk.supabase.co";
+const SUPABASE_KEY = "sb_publishable_U1KSb2iH9KmtXbmOQuB_yw_-IpdKROv";
+let _sb = null;
+async function sb(){
+  if(_sb) return _sb;
+  let mod;
+  try { mod = await import("https://esm.sh/@supabase/supabase-js@2"); }
+  catch { mod = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"); }
+  _sb = mod.createClient(SUPABASE_URL, SUPABASE_KEY);
+  return _sb;
+}
 let saveTimer = null;
 
 function serialize(){ return { project:DATA.project, stages:DATA.stages, hard:DATA.hard, soft:DATA.soft, updatedAt:Date.now() }; }
@@ -359,23 +370,27 @@ function setSync(state){
 async function push(){
   setSync("saving");
   try{
-    const r=await fetch(API,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(serialize())});
-    if(!r.ok) throw 0; const d=await r.json(); localUpdatedAt=d.updatedAt||Date.now(); setSync("ok");
-  }catch(e){ setSync("offline"); }
+    const client = await sb();
+    const payload = serialize();
+    const { error } = await client.from("board").upsert({ id:1, data:payload, updated_at:new Date().toISOString() });
+    if(error) throw error;
+    localUpdatedAt = payload.updatedAt; setSync("ok");
+  }catch(e){ console.error(e); setSync("offline"); }
 }
 function scheduleSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(push,500); }
 
 async function pull(){
   try{
-    const r=await fetch(API,{cache:"no-store"});
-    if(r.status===404){ await push(); return; }      // 服务端无数据 → 写入当前默认
-    if(!r.ok) throw 0;
-    const d=await r.json();
+    const client = await sb();
+    const { data, error } = await client.from("board").select("data").eq("id",1).maybeSingle();
+    if(error) throw error;
+    if(!data){ await push(); return; }               // 无数据 → 写入默认
+    const d = data.data;
     if(firstLoad || (d.updatedAt && d.updatedAt!==localUpdatedAt && !editing())){
       applyData(d); renderAll(); localUpdatedAt=d.updatedAt||localUpdatedAt;
     }
     firstLoad=false; setSync("ok");
-  }catch(e){ firstLoad=false; setSync("offline"); }
+  }catch(e){ firstLoad=false; console.error(e); setSync("offline"); }
 }
 function applyData(d){
   if(d.project)DATA.project=d.project;
