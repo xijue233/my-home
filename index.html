@@ -46,7 +46,6 @@
   .nav button.active{color:var(--ink)}
   .nav button.active:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent);border-radius:2px}
 
-  .subbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:14px 0 2px}
   .hint{font-size:12.5px;color:var(--ink-2);line-height:1.5}
 
   .panel{display:none} .panel.active{display:block;animation:fade .3s ease}
@@ -210,11 +209,6 @@
     <button class="active" data-tab="progress">装修进度</button>
     <button data-tab="budget">装修预算</button>
   </nav>
-
-  <div class="subbar">
-    <div class="hint">所有文字可直接点改，修改<b>自动同步到云端</b>，换设备打开即为最新。</div>
-    <button class="btn danger" onclick="resetAll()">重置示例</button>
-  </div>
 
   <!-- 进度 -->
   <section class="panel active" id="panel-progress">
@@ -535,7 +529,6 @@ function delStage(i){ if(confirm("确定删除「"+DATA.stages[i].name+"」这�
 function addStage(){ DATA.stages.push({name:"新阶段",icon:"📌",status:"todo",progress:0,open:true,issues:[],support:[],decisions:[]}); scheduleSave(); renderProgress(); const el=document.querySelector('.nm-edit[data-stage="'+(DATA.stages.length-1)+'"]'); if(el){el.focus();document.getSelection().selectAllChildren(el);} }
 function addItem(i,k){ DATA.stages[i][k].push(""); scheduleSave(); renderProgress(); const a=DATA.stages[i][k]; const el=document.querySelector('.txt[data-stage="'+i+'"][data-list="'+k+'"][data-idx="'+(a.length-1)+'"]'); if(el)el.focus(); }
 function delItem(i,k,j){ DATA.stages[i][k].splice(j,1); scheduleSave(); renderProgress(); }
-function resetAll(){ if(confirm("确定清空并恢复示例数据？云端数据将被覆盖。")){ DATA=defaultData(); push(); renderAll(); } }
 
 document.addEventListener("blur",e=>{
   const t=e.target;
