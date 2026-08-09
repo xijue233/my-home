@@ -184,6 +184,25 @@
   .btn:hover{border-color:var(--accent);color:var(--accent)}
   .btn.danger:hover{border-color:var(--danger);color:var(--danger)}
 
+  /* 装修需求 */
+  .brief{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 6px}
+  .brief .chip{font-size:12.5px;border:1px solid var(--line);border-radius:999px;padding:6px 13px;background:var(--surface);color:var(--ink-2)}
+  .brief .chip b{color:var(--ink);font-weight:600}
+  .req-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:680px){.req-grid{grid-template-columns:1fr}}
+  .req-card{border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;background:var(--surface)}
+  .req-head{display:flex;align-items:center;gap:9px;font-weight:600;font-size:16px;margin-bottom:10px}
+  .req-head .emo{font-size:18px}
+  .req-name{outline:none;border-bottom:1px dashed transparent;cursor:text;border-radius:3px;padding:0 2px;font-weight:600;font-size:16px}
+  .req-name:hover{border-bottom-color:var(--todo)} .req-name:focus{border-bottom-color:var(--accent);background:rgba(47,111,94,.06)}
+  .req-block{margin:9px 0}
+  .req-label{font-size:11.5px;font-weight:700;letter-spacing:.02em;margin-bottom:2px;color:var(--accent)}
+  .req-label.soft{color:var(--soft)} .req-label.dev{color:var(--warn)} .req-label.pnt{color:#5b6b8a}
+  .req-txt{font-size:13.5px;color:#3a3833;line-height:1.6;outline:none;border-bottom:1px dashed transparent;border-radius:3px;padding:0 2px}
+  .req-txt:hover{border-bottom-color:var(--todo)} .req-txt:focus{border-bottom-color:var(--accent);background:rgba(47,111,94,.06)}
+  .req-note{font-size:12px;color:var(--ink-2);background:var(--accent-soft);border-radius:10px;padding:8px 11px;margin-top:8px;line-height:1.55}
+  .req-ref{margin-top:10px;border:1px dashed var(--line);border-radius:10px;height:74px;display:flex;align-items:center;justify-content:center;color:var(--ink-2);font-size:12px;background:#fbfaf7}
+
   footer{text-align:center;color:var(--ink-2);font-size:11.5px;margin-top:34px}
   @media (max-width:560px){
     .stats{margin-top:20px} .stat{padding:0 12px}
@@ -207,6 +226,7 @@
   <nav class="nav">
     <button class="active" data-tab="progress">装修进度</button>
     <button data-tab="budget">装修预算</button>
+    <button data-tab="req">装修需求</button>
   </nav>
 
   <!-- 进度 -->
@@ -244,10 +264,63 @@
     <div class="note"><b>说明：</b>硬装报价 <b>¥98,586</b>，成交价 <b>¥90,000</b>（付款按 3331：开工前 30% / 吊顶结束 30% / 墙面地砖结束 30% / 完工后 1 月无质量问题 10%，共 4 笔，勾选「已支付」即可记账）。软装设想预算合计 <b>¥109,790</b>，每行「预算 / 实际」可直接改数字，自动算超支或结余。报价明细可展开查看。</div>
   </section>
 
+  <!-- 装修需求 -->
+  <section class="panel" id="panel-req">
+    <div class="sec"><h2>基本情况</h2><span class="rule"></span></div>
+    <div class="brief" id="brief"></div>
+
+    <div class="sec"><h2>各功能区详细需求</h2><span class="rule"></span></div>
+    <div class="req-grid" id="reqGrid"></div>
+    <button class="add-stage" onclick="addArea()">＋ 添加功能区</button>
+  </section>
+
   <footer>云端实时同步 · 手机 / 电脑打开同一地址即共享</footer>
 </div>
 
 <script>
+/* ===================== 装修需求（来自 PDF 初版，云端同步） ===================== */
+const REQUIREMENTS = [
+  { icon:"🚪", name:"入户过道", ref:"参考图（待补充）",
+    scene:"进门换鞋、放钥匙 / 雨伞 / 快递、狗狗擦脚；女生临时放包包和帽子",
+    furniture:"成品鞋柜、全身镜、靠墙置物架或洞洞板",
+    device:"入户门照射灯开关、客厅氛围灯开关、冰箱、中央空调控制器面板", points:"" },
+  { icon:"🍳", name:"厨房", ref:"参考图（待补充）",
+    scene:"日常做饭，微波炉加热预制菜",
+    furniture:"宜家碗篮、大水槽、上墙置物板、石英石台面",
+    device:"前置过滤器、净水器、洗碗机、热水器、微波炉、电饭煲、净烟机、燃气灶、空气炸锅",
+    points:"小电器旁预留插座；水池下预留净水器、洗碗机插座和进出水管；厨房照明开关 + 人在传感器 + 天然气卫士 + 水浸卫士",
+    note:"不做顶柜，油烟机单独包到顶，墙上做置物板" },
+  { icon:"🛋️", name:"客餐厅 + 南次卧打通（书房组合空间）", ref:"参考图（待补充）",
+    scene:"客厅：看电视、打游戏；餐厅：两人日常吃饭，偶尔朋友聚餐（4-5 人）；书房：办公，与客厅在同一连通空间内",
+    furniture:"三人位沙发 + 单人沙发；电视柜、餐边柜、立柜（组合式，收纳盲盒 / 宠物用品 / 摆件等）；餐桌、人体工学椅；绿植、地毯",
+    device:"85 寸电视、Apple TV、PS5；电脑主机、路由器；风扇灯（餐厅）、漫反射灯（客厅主灯）；交换机（全屋 Mesh 组网）；除湿机、空气净化器",
+    points:"沙发侧边预留插座；书房区域预留插座；电视柜上方预留插座、网线；餐边柜预留插座" },
+  { icon:"🛏️", name:"主卧", ref:"参考图（待补充）",
+    scene:"睡觉",
+    furniture:"梳妆台、次净衣区、床头柜、床 + 床垫",
+    device:"投影仪或小电视、吸顶灯",
+    points:"床头柜 / 梳妆台边预留插座；预留网线接口；卧室吸顶灯开关；中央空调控制面板" },
+  { icon:"👗", name:"衣帽间（客卧）", ref:"参考图待补充",
+    scene:"全屋衣帽收纳、行李箱收纳、杂物收纳",
+    furniture:"全身镜、全钢筋落地衣柜、沙发床（待定）",
+    device:"吸顶灯",
+    points:"沙发床边预留插座；按正常卧室预留；次卧吸顶灯开关" },
+  { icon:"🚿", name:"卫生间（卫浴）", ref:"参考图（待补充）",
+    scene:"日常洗漱",
+    furniture:"浴室柜 + 镜子（不要镜柜）、花洒、壁龛",
+    device:"智能马桶、浴霸、扫拖机器人",
+    points:"智能马桶预留插座；浴室柜旁预留吹风机插座（斜五孔）；浴霸控制面板；扫拖机器人插座 + 预留上下水管；墙排水管；干区照明灯开关 + 人在传感器",
+    note:"卫生间瓷砖用莱姆石样式瓷砖；浴帘 / 玻璃隔断分别做价格单" },
+  { icon:"🌞", name:"阳台", ref:"参考图（待补充）",
+    scene:"晒衣服、通风",
+    furniture:"洗衣机、烘干机；工具柜（收纳清扫工具）；洗地机、吸尘器",
+    points:"洗衣机 / 烘干机单独插座；预留内衣洗衣机插座；窗帘盒旁预留智能窗帘电机插座；阳台灯开关 + 人在传感器" },
+  { icon:"✨", name:"其他", ref:"",
+    scene:"",
+    furniture:"书房和主卧飘窗窗帘用罗马帘 / 日夜蜂巢帘",
+    device:"", points:"" }
+];
+
 /* ===================== 默认数据（首次连接服务端会自动写入） ===================== */
 function defaultData(){
   return {
@@ -328,7 +401,8 @@ function defaultData(){
         { name:"卧室投影仪 · P2", budget:3000, actual:0 },
         { name:"智能家居(小米) · P2", budget:2000, actual:0 }
       ]
-    }
+    },
+    requirements: REQUIREMENTS
   };
 }
 
@@ -351,7 +425,7 @@ async function sb(){
 }
 let saveTimer = null;
 
-function serialize(){ return { project:DATA.project, stages:DATA.stages, hard:DATA.hard, soft:DATA.soft, updatedAt:Date.now() }; }
+function serialize(){ return { project:DATA.project, stages:DATA.stages, hard:DATA.hard, soft:DATA.soft, requirements:DATA.requirements, updatedAt:Date.now() }; }
 function editing(){ const a=document.activeElement; return a && a.isContentEditable; }
 function setSync(state){
   const el=$("#sync"), t=$("#syncTxt");
@@ -390,6 +464,7 @@ function applyData(d){
   if(Array.isArray(d.stages))DATA.stages=d.stages.map(({status, ...rest})=>rest);
   if(d.hard)DATA.hard=d.hard;
   if(d.soft)DATA.soft=d.soft;
+  if(Array.isArray(d.requirements))DATA.requirements=d.requirements;
   DATA.stages.forEach(s=>{ if(s.open===undefined)s.open=false; });
 }
 
@@ -516,7 +591,22 @@ function renderBudget(){
 function setPaid(i,v){ DATA.hard.plan[i].paid=v; scheduleSave(); renderBudget(); }
 function softInput(key,j,field,val){ DATA.soft[key][j][field]=Math.max(0,parseFloat(val)||0); scheduleSave(); renderTotals(); }
 function toggleSec(el){ const d=$("#secDetail"); const open=d.style.display!=="none"; d.style.display=open?"none":"block"; el.textContent=open?`▾ 展开报价明细（${DATA.hard.sections.length} 项）`:`▴ 收起报价明细`; }
-function renderAll(){ renderHeader(); renderProgress(); renderBudget(); }
+function renderAll(){ renderHeader(); renderProgress(); renderBudget(); renderReq(); }
+
+const REQ_FIELD = t => t==="需求场景"?"scene":t==="涉及家具 / 软装"?"furniture":t==="电器 / 设备"?"device":"points";
+function renderReq(){
+  const base=[["建筑面积","98㎡"],["室内面积","80㎡"],["户型","三室一厅"],["居住对象","2 人 + 1 猫 + 1 狗"],["楼层","1 楼西户"]];
+  $("#brief").innerHTML=base.map(([k,v])=>`<span class="chip">${k} · <b>${v}</b></span>`).join("");
+  const arr=DATA.requirements;
+  $("#reqGrid").innerHTML=arr.map((r,i)=>{
+    const labels=[["需求场景",r.scene],["涉及家具 / 软装",r.furniture,"soft"],["电器 / 设备",r.device,"dev"],["水电点位",r.points,"pnt"]];
+    const blocks=labels.map(([t,c,cls])=>`<div class="req-block"><div class="req-label ${cls||''}">${t}</div><div class="req-txt" contenteditable="true" data-req="${i}" data-reqfield="${REQ_FIELD(t)}">${c||""}</div></div>`).join("");
+    const note=r.note?`<div class="req-note">备注：<span class="req-txt" contenteditable="true" data-req="${i}" data-reqfield="note">${r.note}</span></div>`:"";
+    const ref=r.ref?`<div class="req-ref">📷 ${r.ref}</div>`:"";
+    const del=`<button class="iconbtn del" title="删除" onclick="delArea(${i})" style="margin-left:auto">✕</button>`;
+    return `<div class="req-card"><div class="req-head"><span class="emo">${r.icon}</span><span class="req-name" contenteditable="true" data-req="${i}" data-reqfield="name">${r.name}</span>${del}</div>${blocks}${note}${ref}</div>`;
+  }).join("");
+}
 
 /* ===================== 编辑操作 ===================== */
 function toggle(i){ DATA.stages[i].open=!DATA.stages[i].open; scheduleSave(); renderProgress(); }
@@ -524,6 +614,8 @@ function setProg(i,v){ DATA.stages[i].progress=+v; const f=$("#pf"+i),n=$("#pn"+
 function moveStage(i,d){ const j=i+d; if(j<0||j>=DATA.stages.length)return; const t=DATA.stages[i];DATA.stages[i]=DATA.stages[j];DATA.stages[j]=t; scheduleSave(); renderProgress(); }
 function delStage(i){ if(confirm("确定删除「"+DATA.stages[i].name+"」这个阶段？")){ DATA.stages.splice(i,1); scheduleSave(); renderProgress(); } }
 function addStage(){ DATA.stages.push({name:"新阶段",icon:"📌",progress:0,open:true,issues:[],support:[],decisions:[]}); scheduleSave(); renderProgress(); const el=document.querySelector('.nm-edit[data-stage="'+(DATA.stages.length-1)+'"]'); if(el){el.focus();document.getSelection().selectAllChildren(el);} }
+function addArea(){ DATA.requirements.push({icon:"📋",name:"新功能区",scene:"",furniture:"",device:"",points:"",note:"",ref:""}); scheduleSave(); renderReq(); const el=document.querySelector('.req-name[data-req="'+(DATA.requirements.length-1)+'"]'); if(el){el.focus();document.getSelection().selectAllChildren(el);} }
+function delArea(i){ if(confirm("确定删除「"+DATA.requirements[i].name+"」这个功能区？")){ DATA.requirements.splice(i,1); scheduleSave(); renderReq(); } }
 function addItem(i,k){ DATA.stages[i][k].push(""); scheduleSave(); renderProgress(); const a=DATA.stages[i][k]; const el=document.querySelector('.txt[data-stage="'+i+'"][data-list="'+k+'"][data-idx="'+(a.length-1)+'"]'); if(el)el.focus(); }
 function delItem(i,k,j){ DATA.stages[i][k].splice(j,1); scheduleSave(); renderProgress(); }
 
@@ -533,7 +625,8 @@ document.addEventListener("blur",e=>{
   else if(t.classList&&t.classList.contains("nm-edit")){ DATA.stages[+t.dataset.stage].name=t.textContent.trim(); scheduleSave(); }
   else if(t.dataset&&t.dataset.soft!==undefined){ DATA.soft[t.dataset.soft][+t.dataset.idx].name=t.textContent.trim(); scheduleSave(); }
   else if(t.dataset&&t.dataset.list!==undefined){ DATA.stages[+t.dataset.stage][t.dataset.list][+t.dataset.idx]=t.textContent.trim(); scheduleSave(); }
-},true);
+  else if(t.dataset&&t.dataset.req!==undefined){ const i=+t.dataset.req, f=t.dataset.reqfield; if(f)DATA.requirements[i][f]=t.textContent.trim(); scheduleSave(); }
+  },true);
 document.addEventListener("keydown",e=>{ if(e.target.isContentEditable&&e.key==="Enter"){ e.preventDefault(); e.target.blur(); } });
 
 /* tab */
