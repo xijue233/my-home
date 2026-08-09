@@ -87,7 +87,6 @@
   .nm-edit{outline:none;border-bottom:1px dashed transparent;cursor:text;border-radius:3px;padding:0 2px}
   .nm-edit:hover{border-bottom-color:var(--todo)} .nm-edit:focus{border-bottom-color:var(--accent);background:rgba(47,111,94,.06)}
   .head-right{display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex:0 0 auto}
-  .status-select{font:600 11.5px var(--sans);padding:4px 8px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
   .badge{font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:999px}
   .badge.done{background:#e8f1e9;color:var(--done)} .badge.active{background:var(--accent-soft);color:var(--accent)} .badge.todo{background:#f1efea;color:var(--todo)}
 
@@ -254,16 +253,16 @@ function defaultData(){
   return {
     project:{ name:"银湖万象装修进度及预算控制", address:"银湖万象 6 栋", area:"98㎡", start:"", expectedEnd:"" },
     stages:[
-      { name:"设计交底 & 前期准备", icon:"📐", status:"todo", progress:0, open:false, issues:[], support:[], decisions:[] },
-      { name:"主体拆改", icon:"🔨", status:"todo", progress:0, open:false, issues:[], support:[], decisions:[] },
-      { name:"水电改造", icon:"💡", status:"todo", progress:0, open:false, issues:[], support:[], decisions:[] },
-      { name:"防水 & 泥瓦工程", icon:"🧱", status:"todo", progress:0, open:false, issues:[], support:[], decisions:[] },
-      { name:"吊顶 & 木工", icon:"🔧", status:"todo", progress:0, open:false, issues:[], support:[], decisions:[] },
-      { name:"地砖墙砖铺贴", icon:"🟦", status:"todo", progress:0, open:false, issues:[], support:[], decisions:[] },
-      { name:"乳胶漆 & 墙面", icon:"🎨", status:"todo", progress:0, open:false, issues:[], support:[], decisions:[] },
-      { name:"成品安装", icon:"🚪", status:"todo", progress:0, open:false, issues:[], support:[], decisions:[] },
-      { name:"软装进场", icon:"🛋️", status:"todo", progress:0, open:false, issues:[], support:[], decisions:[] },
-      { name:"验收 & 入住", icon:"✅", status:"todo", progress:0, open:false, issues:[], support:[], decisions:[] }
+      { name:"设计交底 & 前期准备", icon:"📐", progress:0, open:false, issues:[], support:[], decisions:[] },
+      { name:"主体拆改", icon:"🔨", progress:0, open:false, issues:[], support:[], decisions:[] },
+      { name:"水电改造", icon:"💡", progress:0, open:false, issues:[], support:[], decisions:[] },
+      { name:"防水 & 泥瓦工程", icon:"🧱", progress:0, open:false, issues:[], support:[], decisions:[] },
+      { name:"吊顶 & 木工", icon:"🔧", progress:0, open:false, issues:[], support:[], decisions:[] },
+      { name:"地砖墙砖铺贴", icon:"🟦", progress:0, open:false, issues:[], support:[], decisions:[] },
+      { name:"乳胶漆 & 墙面", icon:"🎨", progress:0, open:false, issues:[], support:[], decisions:[] },
+      { name:"成品安装", icon:"🚪", progress:0, open:false, issues:[], support:[], decisions:[] },
+      { name:"软装进场", icon:"🛋️", progress:0, open:false, issues:[], support:[], decisions:[] },
+      { name:"验收 & 入住", icon:"✅", progress:0, open:false, issues:[], support:[], decisions:[] }
     ],
     hard:{
       quote:98586,
@@ -388,11 +387,14 @@ async function pull(){
 }
 function applyData(d){
   if(d.project)DATA.project=d.project;
-  if(Array.isArray(d.stages))DATA.stages=d.stages;
+  if(Array.isArray(d.stages))DATA.stages=d.stages.map(({status, ...rest})=>rest);
   if(d.hard)DATA.hard=d.hard;
   if(d.soft)DATA.soft=d.soft;
   DATA.stages.forEach(s=>{ if(s.open===undefined)s.open=false; });
 }
+
+/* 状态由进度百分比推导：0% = 未开始，100% = 已完成，其余 = 进行中 */
+const stageStatus = s => { const p = s.progress||0; return p>=100 ? "done" : p>0 ? "active" : "todo"; };
 
 /* ===================== 渲染 ===================== */
 const fmt = n => "¥" + Math.round(n).toLocaleString("zh-CN");
@@ -407,23 +409,19 @@ const LIST_CLS=k=>k==="issues"?"iss":k==="support"?"sup":"dec";
 
 function renderProgress(){
   const st=DATA.stages;
-  const cur=st.find(s=>s.status==="active")||st.find(s=>s.status!=="done");
+  const cur=st.find(s=>stageStatus(s)==="active")||st.find(s=>stageStatus(s)!=="done");
   $("#curStage").textContent=cur?cur.name:"已完工";
   $("#overall").textContent=Math.round(st.reduce((a,s)=>a+(s.progress||0),0)/st.length)+"%";
   $("#issueCnt").textContent=st.reduce((a,s)=>a+(s.issues?s.issues.length:0),0);
 
   $("#timeline").innerHTML=st.map((s,i)=>{
-    const badge=s.status==="done"?`<span class="badge done">已完成</span>`:s.status==="active"?`<span class="badge active">进行中</span>`:`<span class="badge todo">未开始</span>`;
-    const sel=`<select class="status-select" onchange="setStatus(${i},this.value)">
-        <option value="done" ${s.status==="done"?"selected":""}>已完成</option>
-        <option value="active" ${s.status==="active"?"selected":""}>进行中</option>
-        <option value="todo" ${s.status==="todo"?"selected":""}>未开始</option></select>`;
+    const badge=stageStatus(s)==="done"?`<span class="badge done">已完成</span>`:stageStatus(s)==="active"?`<span class="badge active">进行中</span>`:`<span class="badge todo">未开始</span>`;
     const act=`<div class="stage-actions">
         <button class="iconbtn" title="上移" ${i===0?"disabled":""} onclick="moveStage(${i},-1)">↑</button>
         <button class="iconbtn" title="下移" ${i===st.length-1?"disabled":""} onclick="moveStage(${i},1)">↓</button>
         <button class="iconbtn del" title="删除" onclick="delStage(${i})">✕</button></div>`;
-    const pbar=s.status==="todo"?"":`
-      <div class="pbar"><i class="${s.status==='active'?'active':''}" id="pf${i}" style="width:${s.progress||0}%"></i></div>
+    const pbar=`
+      <div class="pbar"><i class="${stageStatus(s)==='active'?'active':''}" id="pf${i}" style="width:${s.progress||0}%"></i></div>
       <div class="pmeta"><span>进度</span><span id="pn${i}">${s.progress||0}%</span></div>
       <input class="range" type="range" min="0" max="100" value="${s.progress||0}" oninput="setProg(${i},this.value)" onchange="scheduleSave()" />`;
     const lists=["issues","support","decisions"].map(k=>block(k,s[k],i)).join("");
@@ -431,11 +429,11 @@ function renderProgress(){
         <div class="toggle-hint" onclick="toggle(${i})">${s.open?"▴ 收起明细":"▾ 展开明细（问题 / 支持 / 需确定）"}</div></div>`;
     const hint=s.open?"":`<div class="toggle-hint" onclick="toggle(${i})">▾ 展开明细（问题 / 支持 / 需确定）</div>`;
     return `<div class="stage">
-      <div class="rail"><div class="dot ${s.status}"></div><div class="vline"></div></div>
-      <div class="card ${s.status==='active'?'active':''}">
+      <div class="rail"><div class="dot ${stageStatus(s)}"></div><div class="vline"></div></div>
+      <div class="card ${stageStatus(s)==='active'?'active':''}">
         <div class="card-head">
           <div class="card-name"><span class="emo">${s.icon}</span><span class="nm-edit" contenteditable="true" data-stage="${i}">${s.name}</span></div>
-          <div class="head-right">${badge}${sel}${act}</div>
+          <div class="head-right">${badge}${act}</div>
         </div>
         ${pbar}${det}${hint}
       </div></div>`;
@@ -522,11 +520,10 @@ function renderAll(){ renderHeader(); renderProgress(); renderBudget(); }
 
 /* ===================== 编辑操作 ===================== */
 function toggle(i){ DATA.stages[i].open=!DATA.stages[i].open; scheduleSave(); renderProgress(); }
-function setStatus(i,v){ DATA.stages[i].status=v; scheduleSave(); renderProgress(); }
 function setProg(i,v){ DATA.stages[i].progress=+v; const f=$("#pf"+i),n=$("#pn"+i); if(f)f.style.width=v+"%"; if(n)n.textContent=v+"%"; }
 function moveStage(i,d){ const j=i+d; if(j<0||j>=DATA.stages.length)return; const t=DATA.stages[i];DATA.stages[i]=DATA.stages[j];DATA.stages[j]=t; scheduleSave(); renderProgress(); }
 function delStage(i){ if(confirm("确定删除「"+DATA.stages[i].name+"」这个阶段？")){ DATA.stages.splice(i,1); scheduleSave(); renderProgress(); } }
-function addStage(){ DATA.stages.push({name:"新阶段",icon:"📌",status:"todo",progress:0,open:true,issues:[],support:[],decisions:[]}); scheduleSave(); renderProgress(); const el=document.querySelector('.nm-edit[data-stage="'+(DATA.stages.length-1)+'"]'); if(el){el.focus();document.getSelection().selectAllChildren(el);} }
+function addStage(){ DATA.stages.push({name:"新阶段",icon:"📌",progress:0,open:true,issues:[],support:[],decisions:[]}); scheduleSave(); renderProgress(); const el=document.querySelector('.nm-edit[data-stage="'+(DATA.stages.length-1)+'"]'); if(el){el.focus();document.getSelection().selectAllChildren(el);} }
 function addItem(i,k){ DATA.stages[i][k].push(""); scheduleSave(); renderProgress(); const a=DATA.stages[i][k]; const el=document.querySelector('.txt[data-stage="'+i+'"][data-list="'+k+'"][data-idx="'+(a.length-1)+'"]'); if(el)el.focus(); }
 function delItem(i,k,j){ DATA.stages[i][k].splice(j,1); scheduleSave(); renderProgress(); }
 
