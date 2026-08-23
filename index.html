@@ -145,7 +145,7 @@
   .row-b .top .vl{color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}
   .track{height:8px;background:#ececec;border-radius:99px;overflow:hidden}
   .track>i{display:block;height:100%;border-radius:99px}
-  .fill-hard{background:var(--hard)} .fill-soft{background:var(--soft)}
+  .fill-hard{background:var(--hard)} .fill-soft{background:var(--soft)} .fill-over{background:var(--danger)}
   .diff{font-size:11.5px;margin-top:5px;font-weight:600}
   .diff.up{color:var(--danger)} .diff.down{color:var(--done)} .diff.even{color:var(--ink-2)}
 
@@ -341,10 +341,10 @@ function defaultData(){
       quote:98586,
       deal:90000,
       plan:[
-        { stage:"开工前", pct:30, paid:false },
-        { stage:"吊顶结束", pct:30, paid:false },
-        { stage:"墙面地砖结束", pct:30, paid:false },
-        { stage:"完工后 1 个月（无质量问题）", pct:10, paid:false }
+        { stage:"开工前", pct:30, paid:false, paidAmt:0 },
+        { stage:"吊顶结束", pct:30, paid:false, paidAmt:0 },
+        { stage:"墙面地砖结束", pct:30, paid:false, paidAmt:0 },
+        { stage:"完工后 1 个月（无质量问题）", pct:10, paid:false, paidAmt:0 }
       ],
       sections:[
         { name:"客餐厅及过道/书房", quote:12358 },
@@ -410,6 +410,39 @@ let DATA = defaultData();
 let localUpdatedAt = 0;
 let firstLoad = true;
 
+/* ---- 本地缓存：打开即显示上次同步好的页面，无需等待云端 ---- */
+const CACHE_KEY = "xijue_board_cache_v1";
+function cacheNow(){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify(serialize())); }catch(e){} }
+function normalizeHardPlan(){
+  (DATA.hard.plan||[]).forEach(m=>{ if(m.paidAmt===undefined) m.paidAmt = m.paid ? Math.round((DATA.hard.deal||0)*(m.pct||0)/100) : 0; });
+}
+function normalizeData(d){
+  d = d || {};
+  if(!d.project) d.project = { name:"银湖万象装修进度及预算控制", address:"银湖万象 6 栋", area:"98㎡", start:"", expectedEnd:"" };
+  if(!Array.isArray(d.stages)) d.stages = [];
+  if(!Array.isArray(d.requirements)) d.requirements = REQUIREMENTS.map(x=>({...x}));
+  if(!d.hard) d.hard = { quote:98586, deal:90000, plan:[], sections:[] };
+  if(!Array.isArray(d.hard.plan)) d.hard.plan = [];
+  if(!d.soft) d.soft = { furniture:[], appliance:[] };
+  if(!Array.isArray(d.soft.furniture)) d.soft.furniture = [];
+  if(!Array.isArray(d.soft.appliance)) d.soft.appliance = [];
+  return d;
+}
+(function loadCache(){
+  try{
+    const c = localStorage.getItem(CACHE_KEY);
+    if(c){
+      const o = JSON.parse(c);
+      if(o && o.project){
+        DATA = normalizeData(o);
+        normalizeHardPlan();
+        localUpdatedAt = o.updatedAt || 0;
+        firstLoad = false;
+      }
+    }
+  }catch(e){}
+})();
+
 /* ===================== 云端同步 ===================== */
 /* ---- Supabase 配置（前端仅用 publishable key，secret 不暴露） ---- */
 const SUPABASE_URL = "https://gjysocgnwgljlpkurixk.supabase.co";
@@ -441,7 +474,7 @@ async function push(){
     const payload = serialize();
     const { error } = await client.from("board").upsert({ id:1, data:payload, updated_at:new Date().toISOString() });
     if(error) throw error;
-    localUpdatedAt = payload.updatedAt; setSync("ok");
+    localUpdatedAt = payload.updatedAt; setSync("ok"); cacheNow();
   }catch(e){ console.error(e); setSync("offline"); }
 }
 function scheduleSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(push,500); }
@@ -453,7 +486,8 @@ async function pull(){
     if(error) throw error;
     if(!data){ await push(); return; }               // 无数据 → 写入默认
     const d = data.data;
-    if(firstLoad || (d.updatedAt && d.updatedAt!==localUpdatedAt && !editing())){
+    const cloudNewer = d.updatedAt && d.updatedAt > localUpdatedAt;
+    if(firstLoad || (cloudNewer && !editing())){
       applyData(d); renderAll(); localUpdatedAt=d.updatedAt||localUpdatedAt;
     }
     firstLoad=false; setSync("ok");
@@ -463,9 +497,11 @@ function applyData(d){
   if(d.project)DATA.project=d.project;
   if(Array.isArray(d.stages))DATA.stages=d.stages.map(({status, ...rest})=>rest);
   if(d.hard)DATA.hard=d.hard;
-  if(d.soft)DATA.soft=d.soft;
+  if(d.soft){ if(!Array.isArray(d.soft.furniture))d.soft.furniture=[]; if(!Array.isArray(d.soft.appliance))d.soft.appliance=[]; DATA.soft=d.soft; }
   if(Array.isArray(d.requirements))DATA.requirements=d.requirements;
   DATA.stages.forEach(s=>{ if(s.open===undefined)s.open=false; });
+  normalizeHardPlan();
+  cacheNow();
 }
 
 /* 状态由进度百分比推导：0% = 未开始，100% = 已完成，其余 = 进行中 */
@@ -520,7 +556,7 @@ function block(k,arr,i){
     : arr.map((x,j)=>`<div class="li ${cls}"><span class="txt" contenteditable="true" data-stage="${i}" data-list="${k}" data-idx="${j}">${x}</span><button class="x" onclick="delItem(${i},'${k}',${j})" title="删除">×</button></div>`).join("");
   return `<div class="dtag ${cls}">${LIST_TITLE(k)}<button class="addbtn" onclick="addItem(${i},'${k}')">＋ 添加</button></div>${body}`;
 }
-function hardPaid(){ const h=DATA.hard; return h.plan.reduce((a,m)=>a+(m.paid?h.deal*m.pct/100:0),0); }
+function hardPaid(){ return DATA.hard.plan.reduce((a,m)=>a+(m.paidAmt||0),0); }
 
 function renderTotals(){
   const h=DATA.hard;
@@ -557,30 +593,38 @@ function renderBudget(){
 
   const planHtml=h.plan.map((m,i)=>{
     const amt=Math.round(h.deal*m.pct/100);
-    return `<div class="pm ${m.paid?"paid":""}">
-      <div class="pm-top"><span class="pm-stage">${m.stage}</span><span class="pm-amt">${m.pct}% · ${fmt(amt)}</span></div>
-      <label class="pm-paid"><input type="checkbox" ${m.paid?"checked":""} onchange="setPaid(${i},this.checked)"> 已支付</label>
+    const pa=m.paidAmt||0;
+    const done=pa>=amt, part=pa>0&&!done;
+    const st=done?"已付清":part?"部分支付":"未付";
+    const badge=done?"done":part?"active":"todo";
+    return `<div class="pm ${done?'paid':''}">
+      <div class="pm-top"><span class="pm-stage">${m.stage}</span><span class="pm-amt">计划 ${fmt(amt)}</span>
+        <span class="pm-amt" style="margin-left:6px">实付 <input class="numin" type="number" min="0" value="${pa}" oninput="setPaidAmt(${i},this.value)" onchange="renderBudget()" style="width:88px"></span></div>
+      <span class="badge ${badge}">${st}</span>
     </div>`;
   }).join("");
   const secHtml=h.sections.map(s=>`<div class="row-b sm"><div class="top"><span class="nm">${s.name}</span><span class="vl">${fmt(s.quote)}</span></div></div>`).join("");
 
   $("#hardList").innerHTML=`
-    <div class="deal-line">报价 <b>${fmt(h.quote)}</b> → 成交价 <b>${fmt(h.deal)}</b> <span class="save">立省 ${fmt(h.quote-h.deal)}</span></div>
-    <div class="pbar" style="margin:12px 0 14px"><i style="width:${paidPct}%"></i></div>
+    <div class="deal-line">报价 <b>${fmt(h.quote)}</b> → 成交价 <input class="numin" type="number" min="0" value="${h.deal}" oninput="setDeal(this.value)" onchange="renderBudget()" style="width:96px;font-weight:600"> <span class="save">立省 ${fmt(h.quote-h.deal)}</span></div>
+    <div class="pbar" style="margin:12px 0 14px"><i id="hardBar" style="width:${paidPct}%"></i></div>
     <div class="plan">${planHtml}</div>
-    <div class="psum">已付 <b>${fmt(hp)}</b> / 成交价 ${fmt(h.deal)} · 待付 <b>${fmt(h.deal-hp)}</b></div>
+    <div class="psum" id="psumTxt">已付 <b>${fmt(hp)}</b> / 成交价 ${fmt(h.deal)} · 待付 <b>${fmt(h.deal-hp)}</b></div>
     <div class="toggle-hint" onclick="toggleSec(this)">▾ 展开报价明细（${h.sections.length} 项）</div>
     <div class="sec-detail" id="secDetail" style="display:none">${secHtml}</div>`;
 
   const rs=(t,arr,key)=>`<h3>${t}</h3>`+arr.map((x,j)=>{
-    const p=x.budget?Math.min(100,Math.round(x.actual/x.budget*100)):0;
+    const exec = x.budget ? Math.round(x.actual/x.budget*100) : 0;
+    const overPct = x.budget ? Math.round((x.actual-x.budget)/x.budget*100) : 0;
     const d=x.budget-x.actual, cls=d<0?"up":(d>0&&x.actual>0?"down":"even");
-    const txt=x.actual===0?"未支出":(d<0?`超支 ${fmt(-d)}`:`结余 ${fmt(d)}`);
+    const txt = x.actual===0 ? "未支出" : d<0 ? `超支 ${fmt(-d)} · 超 ${overPct}%` : `结余 ${fmt(d)} · 用 ${exec}%`;
+    const barW = x.budget ? Math.min(100, exec) : 0;
+    const barCls = d<0 ? "fill-over" : "fill-soft";
     return `<div class="row-b">
       <div class="top"><span class="nm"><span class="txt" contenteditable="true" data-soft="${key}" data-idx="${j}">${x.name}</span></span>
         <span class="vl">预算 <input class="numin" type="number" min="0" value="${x.budget}" oninput="softInput('${key}',${j},'budget',this.value)" onchange="renderBudget()"> · 实际 <input class="numin" type="number" min="0" value="${x.actual}" oninput="softInput('${key}',${j},'actual',this.value)" onchange="renderBudget()"></span></div>
-      <div class="track"><i class="fill-soft" style="width:${p}%"></i></div>
-      <div class="diff ${cls}">${txt}${x.actual>0?` · ${p}%`:""}</div>
+      <div class="track"><i class="${barCls}" style="width:${barW}%"></i></div>
+      <div class="diff ${cls}">${txt}</div>
     </div>`;
   }).join("");
   $("#softList").innerHTML=rs("🪑 家具",DATA.soft.furniture,"furniture")+rs("🔌 电器",DATA.soft.appliance,"appliance");
@@ -588,7 +632,13 @@ function renderBudget(){
   renderTotals();
 }
 
-function setPaid(i,v){ DATA.hard.plan[i].paid=v; scheduleSave(); renderBudget(); }
+function setPaidAmt(i,v){ DATA.hard.plan[i].paidAmt=Math.max(0,parseFloat(v)||0); scheduleSave(); renderTotals(); updateHardLive(); }
+function setDeal(v){ DATA.hard.deal=Math.max(0,parseFloat(v)||0); scheduleSave(); renderTotals(); updateHardLive(); }
+function updateHardLive(){
+  const h=DATA.hard, hp=hardPaid(), paidPct=h.deal?Math.round(hp/h.deal*100):0;
+  const bar=$("#hardBar"); if(bar)bar.style.width=paidPct+"%";
+  const ps=$("#psumTxt"); if(ps)ps.innerHTML=`已付 <b>${fmt(hp)}</b> / 成交价 ${fmt(h.deal)} · 待付 <b>${fmt(h.deal-hp)}</b>`;
+}
 function softInput(key,j,field,val){ DATA.soft[key][j][field]=Math.max(0,parseFloat(val)||0); scheduleSave(); renderTotals(); }
 function toggleSec(el){ const d=$("#secDetail"); const open=d.style.display!=="none"; d.style.display=open?"none":"block"; el.textContent=open?`▾ 展开报价明细（${DATA.hard.sections.length} 项）`:`▴ 收起报价明细`; }
 function renderAll(){ renderHeader(); renderProgress(); renderBudget(); renderReq(); }
