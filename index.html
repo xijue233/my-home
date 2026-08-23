@@ -258,10 +258,14 @@
     <div class="sec"><h2>软装 · 预算执行</h2><span class="rule"></span></div>
     <div class="grp" id="softList"></div>
 
+    <div class="sec"><h2>临时记账 · 其他支出</h2><span class="rule"></span></div>
+    <div class="grp" id="extraList"></div>
+    <button class="add-stage" onclick="addExtra()">＋ 记一笔</button>
+
     <div class="sec"><h2>超支预警</h2><span class="rule"></span></div>
     <div id="alertBox"></div>
 
-    <div class="note"><b>说明：</b>硬装报价 <b>¥98,586</b>，成交价 <b>¥90,000</b>（付款按 3331：开工前 30% / 吊顶结束 30% / 墙面地砖结束 30% / 完工后 1 月无质量问题 10%，共 4 笔，勾选「已支付」即可记账）。软装设想预算合计 <b>¥109,790</b>，每行「预算 / 实际」可直接改数字，自动算超支或结余。报价明细可展开查看。</div>
+    <div class="note"><b>说明：</b>硬装成交价 <b>¥88,800</b>（装修公司定价），总预算 <b>¥200,000</b>，剩余约 <b>¥111,200</b> 用于软装。硬装付款按计划节点填「实付」金额即可记账；软装每行「预算 / 实际」可改，自动算超支或结余；下方「临时记账」可记录计划外的新增花费，自动计入总支出。</div>
   </section>
 
   <!-- 装修需求 -->
@@ -339,7 +343,7 @@ function defaultData(){
     ],
     hard:{
       quote:98586,
-      deal:90000,
+      deal:88800,
       plan:[
         { stage:"开工前", pct:30, paid:false, paidAmt:0 },
         { stage:"吊顶结束", pct:30, paid:false, paidAmt:0 },
@@ -402,7 +406,9 @@ function defaultData(){
         { name:"智能家居(小米) · P2", budget:2000, actual:0 }
       ]
     },
-    requirements: REQUIREMENTS
+    requirements: REQUIREMENTS,
+    total: 200000,
+    extra: []
   };
 }
 
@@ -426,6 +432,8 @@ function normalizeData(d){
   if(!d.soft) d.soft = { furniture:[], appliance:[] };
   if(!Array.isArray(d.soft.furniture)) d.soft.furniture = [];
   if(!Array.isArray(d.soft.appliance)) d.soft.appliance = [];
+  if(typeof d.total!=="number") d.total = 200000;
+  if(!Array.isArray(d.extra)) d.extra = [];
   return d;
 }
 (function loadCache(){
@@ -458,7 +466,7 @@ async function sb(){
 }
 let saveTimer = null;
 
-function serialize(){ return { project:DATA.project, stages:DATA.stages, hard:DATA.hard, soft:DATA.soft, requirements:DATA.requirements, updatedAt:Date.now() }; }
+function serialize(){ return { project:DATA.project, stages:DATA.stages, hard:DATA.hard, soft:DATA.soft, requirements:DATA.requirements, total:DATA.total, extra:DATA.extra, updatedAt:Date.now() }; }
 function editing(){ const a=document.activeElement; return a && a.isContentEditable; }
 function setSync(state){
   const el=$("#sync"), t=$("#syncTxt");
@@ -499,6 +507,8 @@ function applyData(d){
   if(d.hard)DATA.hard=d.hard;
   if(d.soft){ if(!Array.isArray(d.soft.furniture))d.soft.furniture=[]; if(!Array.isArray(d.soft.appliance))d.soft.appliance=[]; DATA.soft=d.soft; }
   if(Array.isArray(d.requirements))DATA.requirements=d.requirements;
+  if(typeof d.total==="number")DATA.total=d.total;
+  if(Array.isArray(d.extra))DATA.extra=d.extra;
   DATA.stages.forEach(s=>{ if(s.open===undefined)s.open=false; });
   normalizeHardPlan();
   cacheNow();
@@ -563,14 +573,15 @@ function renderTotals(){
   const hp=hardPaid();
   const soft=[...DATA.soft.furniture,...DATA.soft.appliance];
   const sb=soft.reduce((a,x)=>a+x.budget,0), sa=soft.reduce((a,x)=>a+x.actual,0);
-  const total=h.deal+sb, used=hp+sa, left=total-used;
+  const ex=(DATA.extra||[]).reduce((a,x)=>a+(x.amount||0),0);
+  const total=DATA.total||0, used=hp+sa+ex, left=total-used;
 
   $("#kpis").innerHTML=[{c:"",l:"总预算",n:fmt(total)},{c:"used",l:"已支出",n:fmt(used)},
     {c:"left",l:"剩余",n:fmt(left)},{c:left<0?"over":"left",l:"总体结余",n:(left<0?"超 ":"省 ")+fmt(Math.abs(left))}]
     .map(k=>`<div class="kpi ${k.c}"><div class="num">${k.n}</div><div class="lbl">${k.l}</div></div>`).join("");
 
   const hpPct=total?Math.round(h.deal/total*100):0, C=2*Math.PI*52;
-  const hardLen=C*hpPct/100, softLen=C-hardLen;
+  const hardLen=C*hpPct/100, softLen=C*(total?Math.round(sb/total*100):0)/100;
   $("#donut").innerHTML=`<svg width="128" height="128" viewBox="0 0 120 120" style="transform:rotate(-90deg)">
       <circle cx="60" cy="60" r="52" fill="none" stroke="#ececec" stroke-width="13"/>
       <circle cx="60" cy="60" r="52" fill="none" stroke="var(--hard)" stroke-width="13" stroke-dasharray="${hardLen} ${C-hardLen}"/>
@@ -629,6 +640,13 @@ function renderBudget(){
   }).join("");
   $("#softList").innerHTML=rs("🪑 家具",DATA.soft.furniture,"furniture")+rs("🔌 电器",DATA.soft.appliance,"appliance");
 
+  $("#extraList").innerHTML = (DATA.extra&&DATA.extra.length) ? DATA.extra.map((x,j)=>`
+    <div class="row-b">
+      <div class="top"><span class="nm"><span class="txt" contenteditable="true" data-extra="${j}">${x.name||""}</span></span>
+        <span class="vl">金额 <input class="numin" type="number" min="0" value="${x.amount||0}" oninput="extraInput(${j},this.value)" onchange="renderBudget()"></span>
+        <button class="iconbtn del" title="删除" onclick="delExtra(${j})">✕</button></div>
+    </div>`).join("") : `<div class="empty">暂无临时记账，点下方「＋ 记一笔」记录计划外花费</div>`;
+
   renderTotals();
 }
 
@@ -666,6 +684,9 @@ function delStage(i){ if(confirm("确定删除「"+DATA.stages[i].name+"」这�
 function addStage(){ DATA.stages.push({name:"新阶段",icon:"📌",progress:0,open:true,issues:[],support:[],decisions:[]}); scheduleSave(); renderProgress(); const el=document.querySelector('.nm-edit[data-stage="'+(DATA.stages.length-1)+'"]'); if(el){el.focus();document.getSelection().selectAllChildren(el);} }
 function addArea(){ DATA.requirements.push({icon:"📋",name:"新功能区",scene:"",furniture:"",device:"",points:"",note:"",ref:""}); scheduleSave(); renderReq(); const el=document.querySelector('.req-name[data-req="'+(DATA.requirements.length-1)+'"]'); if(el){el.focus();document.getSelection().selectAllChildren(el);} }
 function delArea(i){ if(confirm("确定删除「"+DATA.requirements[i].name+"」这个功能区？")){ DATA.requirements.splice(i,1); scheduleSave(); renderReq(); } }
+function extraInput(j,v){ DATA.extra[j].amount=Math.max(0,parseFloat(v)||0); scheduleSave(); renderTotals(); }
+function addExtra(){ if(!DATA.extra)DATA.extra=[]; DATA.extra.push({name:"新增支出",amount:0}); scheduleSave(); renderBudget(); const el=document.querySelector('.txt[data-extra="'+(DATA.extra.length-1)+'"]'); if(el){el.focus();document.getSelection().selectAllChildren(el);} }
+function delExtra(j){ DATA.extra.splice(j,1); scheduleSave(); renderBudget(); }
 function addItem(i,k){ DATA.stages[i][k].push(""); scheduleSave(); renderProgress(); const a=DATA.stages[i][k]; const el=document.querySelector('.txt[data-stage="'+i+'"][data-list="'+k+'"][data-idx="'+(a.length-1)+'"]'); if(el)el.focus(); }
 function delItem(i,k,j){ DATA.stages[i][k].splice(j,1); scheduleSave(); renderProgress(); }
 
@@ -676,6 +697,7 @@ document.addEventListener("blur",e=>{
   else if(t.dataset&&t.dataset.soft!==undefined){ DATA.soft[t.dataset.soft][+t.dataset.idx].name=t.textContent.trim(); scheduleSave(); }
   else if(t.dataset&&t.dataset.list!==undefined){ DATA.stages[+t.dataset.stage][t.dataset.list][+t.dataset.idx]=t.textContent.trim(); scheduleSave(); }
   else if(t.dataset&&t.dataset.req!==undefined){ const i=+t.dataset.req, f=t.dataset.reqfield; if(f)DATA.requirements[i][f]=t.textContent.trim(); scheduleSave(); }
+  else if(t.dataset&&t.dataset.extra!==undefined){ DATA.extra[+t.dataset.extra].name=t.textContent.trim(); scheduleSave(); }
   },true);
 document.addEventListener("keydown",e=>{ if(e.target.isContentEditable&&e.key==="Enter"){ e.preventDefault(); e.target.blur(); } });
 
