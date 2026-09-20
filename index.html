@@ -285,7 +285,7 @@
     <button class="linkbtn" onclick="exportBackup()">⬇ 导出备份</button>
     <label class="linkbtn">⬆ 导入备份<input type="file" accept="application/json,.json" onchange="importBackup(this.files[0]);this.value=''" hidden></label>
   </div>
-  <footer>本机自动保存 · 换设备请用「导出备份 / 导入备份」迁移数据</footer>
+  <footer>云端实时同步 · 手机 / 电脑打开同一地址即共享（也可导出备份留底）</footer>
 </div>
 
 <script>
@@ -459,7 +459,10 @@ function normalizeData(d){
 })();
 
 /* ===================== 云端同步 ===================== */
-/* ---- 纯本地模式：数据存浏览器本机，用「导出/导入备份」在设备间迁移（不连任何云端） ---- */
+/* ---- Supabase 云端同步：直接用 fetch 调 REST 接口，不再依赖第三方 CDN 库（大陆更稳） ---- */
+const SUPABASE_URL = "https://gjysocgnwgljlpkurixk.supabase.co";
+const SUPABASE_KEY = "sb_publishable_U1KSb2iH9KmtXbmOQuB_yw_-IpdKROv";
+const SB_HEAD = { apikey:SUPABASE_KEY, Authorization:"Bearer "+SUPABASE_KEY, "Content-Type":"application/json" };
 
 let saveTimer = null;
 
@@ -472,10 +475,35 @@ function setSync(state){
   else if(state==="offline"){ el.classList.add("offline"); t.textContent="本机模式（未连云端）"; }
   else { t.textContent="已同步"; }
 }
-async function push(){ cacheNow(); setSync("offline"); }   /* 本机保存，状态显示「本机模式」 */
+async function push(){
+  setSync("saving");
+  try{
+    const payload = serialize();
+    const res = await fetch(SUPABASE_URL+"/rest/v1/board", {
+      method:"POST",
+      headers:{...SB_HEAD, Prefer:"resolution=merge-duplicates,return=minimal"},
+      body:JSON.stringify([{ id:1, data:payload, updated_at:new Date().toISOString() }])
+    });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    localUpdatedAt = payload.updatedAt; setSync("ok"); cacheNow();
+  }catch(e){ console.error(e); cacheNow(); setSync("offline"); }
+}
 function scheduleSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(push,500); }
 
-async function pull(){ firstLoad=false; setSync("offline"); }   /* 纯本地：无云端可拉 */
+async function pull(){
+  try{
+    const res = await fetch(SUPABASE_URL+"/rest/v1/board?select=data&id=eq.1", { headers:SB_HEAD });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const rows = await res.json();
+    if(!rows.length){ await push(); return; }
+    const d = rows[0].data;
+    const cloudNewer = d.updatedAt && d.updatedAt > localUpdatedAt;
+    if(firstLoad || (cloudNewer && !editing())){
+      applyData(d); renderAll(); localUpdatedAt=d.updatedAt||localUpdatedAt;
+    }
+    firstLoad=false; setSync("ok");
+  }catch(e){ firstLoad=false; console.error(e); setSync("offline"); }
+}
 
 /* 导出 / 导入备份：云端不可用时，用文件在设备间迁移数据 */
 function exportBackup(){
