@@ -204,9 +204,6 @@
   .req-ref{margin-top:10px;border:1px dashed var(--line);border-radius:10px;height:74px;display:flex;align-items:center;justify-content:center;color:var(--ink-2);font-size:12px;background:#fbfaf7}
 
   footer{text-align:center;color:var(--ink-2);font-size:11.5px;margin-top:34px}
-  .backup-bar{display:flex;justify-content:center;gap:18px;margin-top:14px}
-  .linkbtn{font:600 12.5px var(--sans);color:var(--accent);background:none;border:1px solid var(--line);border-radius:999px;padding:6px 16px;cursor:pointer;transition:.12s}
-  .linkbtn:hover{background:var(--accent-soft)}
   @media (max-width:560px){
     .stats{margin-top:20px} .stat{padding:0 12px}
     .split{flex-direction:column;text-align:center}
@@ -281,11 +278,7 @@
     <button class="add-stage" onclick="addArea()">＋ 添加功能区</button>
   </section>
 
-  <div class="backup-bar">
-    <button class="linkbtn" onclick="exportBackup()">⬇ 导出备份</button>
-    <label class="linkbtn">⬆ 导入备份<input type="file" accept="application/json,.json" onchange="importBackup(this.files[0]);this.value=''" hidden></label>
-  </div>
-  <footer>云端实时同步 · 手机 / 电脑打开同一地址即共享（也可导出备份留底）</footer>
+  <footer>云端实时同步 · 手机 / 电脑打开同一地址即共享</footer>
 </div>
 
 <script>
@@ -503,34 +496,6 @@ async function pull(){
     }
     firstLoad=false; setSync("ok");
   }catch(e){ firstLoad=false; console.error(e); setSync("offline"); }
-}
-
-/* 导出 / 导入备份：云端不可用时，用文件在设备间迁移数据 */
-function exportBackup(){
-  try{
-    const blob = new Blob([JSON.stringify(serialize(),null,2)], {type:"application/json"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const d = new Date();
-    const pad = n => String(n).padStart(2,"0");
-    a.href = url;
-    a.download = `装修看板备份_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
-    a.click(); URL.revokeObjectURL(url);
-    alert("已导出备份文件，可发到另一台设备用「导入备份」恢复。");
-  }catch(e){ alert("导出失败：" + e.message); }
-}
-function importBackup(file){
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try{
-      const o = JSON.parse(reader.result);
-      applyData(normalizeData(o));
-      renderAll(); cacheNow();
-      alert("已导入备份，本机数据已更新。" + (DATA.extra&&DATA.extra.length?"":"") );
-    }catch(e){ alert("导入失败：文件格式不正确。"); }
-  };
-  reader.readAsText(file);
 }
 
 function applyData(d){
