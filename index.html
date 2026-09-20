@@ -459,18 +459,8 @@ function normalizeData(d){
 })();
 
 /* ===================== 云端同步 ===================== */
-/* ---- Supabase 配置（前端仅用 publishable key，secret 不暴露） ---- */
-const SUPABASE_URL = "https://gjysocgnwgljlpkurixk.supabase.co";
-const SUPABASE_KEY = "sb_publishable_U1KSb2iH9KmtXbmOQuB_yw_-IpdKROv";
-let _sb = null;
-async function sb(){
-  if(_sb) return _sb;
-  let mod;
-  try { mod = await import("https://esm.sh/@supabase/supabase-js@2"); }
-  catch { mod = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"); }
-  _sb = mod.createClient(SUPABASE_URL, SUPABASE_KEY);
-  return _sb;
-}
+/* ---- 纯本地模式：数据存浏览器本机，用「导出/导入备份」在设备间迁移（不连任何云端） ---- */
+
 let saveTimer = null;
 
 function serialize(){ return { project:DATA.project, stages:DATA.stages, hard:DATA.hard, soft:DATA.soft, requirements:DATA.requirements, total:DATA.total, extra:DATA.extra, updatedAt:Date.now() }; }
@@ -482,32 +472,10 @@ function setSync(state){
   else if(state==="offline"){ el.classList.add("offline"); t.textContent="本机模式（未连云端）"; }
   else { t.textContent="已同步"; }
 }
-async function push(){
-  setSync("saving");
-  try{
-    const client = await sb();
-    const payload = serialize();
-    const { error } = await client.from("board").upsert({ id:1, data:payload, updated_at:new Date().toISOString() });
-    if(error) throw error;
-    localUpdatedAt = payload.updatedAt; setSync("ok"); cacheNow();
-  }catch(e){ console.error(e); cacheNow(); setSync("offline"); }
-}
+async function push(){ cacheNow(); setSync("offline"); }   /* 本机保存，状态显示「本机模式」 */
 function scheduleSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(push,500); }
 
-async function pull(){
-  try{
-    const client = await sb();
-    const { data, error } = await client.from("board").select("data").eq("id",1).maybeSingle();
-    if(error) throw error;
-    if(!data){ await push(); return; }               // 无数据 → 写入默认
-    const d = data.data;
-    const cloudNewer = d.updatedAt && d.updatedAt > localUpdatedAt;
-    if(firstLoad || (cloudNewer && !editing())){
-      applyData(d); renderAll(); localUpdatedAt=d.updatedAt||localUpdatedAt;
-    }
-    firstLoad=false; setSync("ok");
-  }catch(e){ firstLoad=false; console.error(e); setSync("offline"); }
-}
+async function pull(){ firstLoad=false; setSync("offline"); }   /* 纯本地：无云端可拉 */
 
 /* 导出 / 导入备份：云端不可用时，用文件在设备间迁移数据 */
 function exportBackup(){
